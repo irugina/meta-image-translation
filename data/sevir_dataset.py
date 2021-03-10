@@ -67,8 +67,15 @@ class SevirDataset(data.Dataset):
         for i in [1,2,3,4]: #don't use vis at all
             mu, sigma  = self.znorm[ind_to_type[i]]
             AB[:, i] = (AB[:, i] - mu) / sigma
-        # done
+        # separate source and target
         A, B = AB[:, (1,2,4), :, :], AB[:, 3:4, :, :] # split AB image into A and B
+        # resize B if need be
+        if self.opt.resize_target:
+            number_frames, _, w, h = B.shape
+            B = B.reshape(number_frames, w, h)
+            B = [resize(x, (self.opt.target_size, self.opt.target_size), preserve_range=True) for x in B]
+            B = np.array(B).reshape(number_frames, 1 , self.opt.target_size, self.opt.target_size)
+        # done
         return {'A': A, 'B': B, 'A_paths': AB_path, 'B_paths': AB_path}
 
     def __len__(self):
