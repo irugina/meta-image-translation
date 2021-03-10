@@ -10,30 +10,8 @@ from torch.optim import Adam
 # local imports
 from data.sevir_dataset import SevirDataset
 from models.sevir import Unet
-
-def train_joint_adversarial():
-    pass
-
-def train_maml_adversarial():
-    pass
-
-def train_joint_reconstruction(model, dataloader, device):
-    loss_fn = torch.nn.L1Loss()
-    optimizer = Adam(model.parameters(), lr=opt.lr, betas=(opt.beta1, 0.999))
-    for train_batch in dataloader:
-        # flatten first two axis - don't care about per event classification of different frames
-        src_img = train_batch['A'].view(-1, *(train_batch['A'].size()[2:])).float()
-        tgt_img = train_batch['B'].view(-1, *(train_batch['B'].size()[2:])).float()
-        src_img, tgt_img = src_img.to(device), tgt_img.to(device)
-        # optimizer step
-        prediction = model(src_img)
-        optimizer.zero_grad()
-        loss = loss_fn(tgt_img, prediction)
-        loss.backward()
-        optimizer.step()
-
-def train_maml_reconstruction():
-    pass
+from utils.train import *
+from utils.eval import *
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Process Train Arguments')
@@ -43,16 +21,10 @@ if __name__ == "__main__":
     parser.add_argument('--batch_size', type=int, default=1)
     parser.add_argument('--optimization', type=str, required=True)
     parser.add_argument('--loss_function', type=str, required=True)
-
     parser.add_argument('--n_epochs', type=int, default=10, help='number of epochs with the initial learning rate')
-    parser.add_argument('--n_epochs_decay', type=int, default=10, help='number of epochs to linearly decay learning rate to zero')
     parser.add_argument('--beta1', type=float, default=0.5, help='momentum term of adam')
     parser.add_argument('--lr', type=float, default=0.0002, help='initial learning rate for adam')
-    parser.add_argument('--gan_mode', type=str, default='lsgan', help='the type of GAN objective. [vanilla| lsgan | wgangp]. vanilla GAN loss is the cross-entropy objective used in the original GAN paper.')
-    parser.add_argument('--pool_size', type=int, default=50, help='the size of image buffer that stores previously generated images')
-    parser.add_argument('--lr_policy', type=str, default='linear', help='learning rate policy. [linear | step | plateau | cosine]')
-    parser.add_argument('--lr_decay_iters', type=int, default=50, help='multiply by a gamma every lr_decay_iters iterations')
-
+    parser.add_argument('--eval_freq', type=int, required=True)
     # ------------------------------------------------------------------------------------------------data
     # filepaths
     parser.add_argument('--dataroot', type=str,
@@ -86,8 +58,13 @@ if __name__ == "__main__":
 
     # data
     dataset = SevirDataset(opt)
-    dataloader = DataLoader(dataset, batch_size=opt.batch_size)
+    train_dataloader = DataLoader(dataset, batch_size=opt.batch_size)
+    # hack to create eval dataloader in this script
+    init_fraction_dataset = opt.fraction_dataset
+    opt.phase, opt.fraction_dataset = "valid", 100
+    eval_dataloader = DataLoader(SevirDataset(opt), batch_size=opt.batch_size)
+    opt.phase, opt.fraction_dataset = "train", init_fraction_dataset
 
     # train
-    train = eval("train_{}_{}".format(opt.optimization, opt.loss_function))
-    train(model, dataloader, opt.device)
+    train_fn = eval("train_{}_{}".format(opt.optimization, opt.loss_function))
+    train_fn(model, train_dataloader, eval_dataloader, opt.device, opt)
