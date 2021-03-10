@@ -17,13 +17,14 @@ def train_joint_adversarial():
 def train_maml_adversarial():
     pass
 
-def train_joint_reconstruction(model, dataloader):
+def train_joint_reconstruction(model, dataloader, device):
     loss_fn = torch.nn.L1Loss()
     optimizer = Adam(model.parameters(), lr=opt.lr, betas=(opt.beta1, 0.999))
     for train_batch in dataloader:
         # flatten first two axis - don't care about per event classification of different frames
         src_img = train_batch['A'].view(-1, *(train_batch['A'].size()[2:])).float()
         tgt_img = train_batch['B'].view(-1, *(train_batch['B'].size()[2:])).float()
+        src_img, tgt_img = src_img.to(device), tgt_img.to(device)
         # optimizer step
         prediction = model(src_img)
         optimizer.zero_grad()
@@ -37,6 +38,7 @@ def train_maml_reconstruction():
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Process Train Arguments')
 
+    parser.add_argument('--device', type=str, required=True)
     # ------------------------------------------------------------------------------------------------training
     parser.add_argument('--batch_size', type=int, default=1)
     parser.add_argument('--optimization', type=str, required=True)
@@ -80,7 +82,7 @@ if __name__ == "__main__":
         assert opt.target_size != -1
 
     # model
-    model = Unet()
+    model = Unet().to(opt.device)
 
     # data
     dataset = SevirDataset(opt)
@@ -88,4 +90,4 @@ if __name__ == "__main__":
 
     # train
     train = eval("train_{}_{}".format(opt.optimization, opt.loss_function))
-    train(model, dataloader)
+    train(model, dataloader, opt.device)
