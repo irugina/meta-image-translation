@@ -18,7 +18,7 @@ if __name__ == "__main__":
 
     parser.add_argument('--device', type=str, required=True)
     # ------------------------------------------------------------------------------------------------training
-    parser.add_argument('--batch_size', type=int, default=1)
+    parser.add_argument('--batch_size', type=int, required=True)
     parser.add_argument('--optimization', type=str, required=True)
     parser.add_argument('--loss_function', type=str, required=True)
     parser.add_argument('--n_epochs', type=int, default=10, help='number of epochs with the initial learning rate')
@@ -46,6 +46,7 @@ if __name__ == "__main__":
     parser.add_argument('--n_query', type=int, default=25)
 
     opt = parser.parse_args()
+    print (opt)
 
     # sanity checks for scripts
     assert opt.optimization in {'joint', 'maml'}
@@ -60,10 +61,9 @@ if __name__ == "__main__":
     dataset = SevirDataset(opt)
     train_dataloader = DataLoader(dataset, batch_size=opt.batch_size)
     # hack to create eval dataloader in this script
-    init_fraction_dataset = opt.fraction_dataset
-    opt.phase, opt.fraction_dataset = "valid", 100
+    opt.phase = "valid"
     eval_dataloader = DataLoader(SevirDataset(opt), batch_size=opt.batch_size)
-    opt.phase, opt.fraction_dataset = "train", init_fraction_dataset
+    opt.phase = "train"
 
     # train
     train_fn = eval("train_{}_{}".format(opt.optimization, opt.loss_function))
