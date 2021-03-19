@@ -67,9 +67,6 @@ def write_datasplit_to_disk(events,
     path_to_dataset, data_stats_path, data_collection_path = os_paths
     print("Writing split {} to disk".format(split))
 
-    file_min = open(os.path.join(data_stats_path, 'min_{}.txt'.format(split)), 'w')
-    file_max = open(os.path.join(data_stats_path, 'max_{}.txt'.format(split)), 'w')
-
     data_index = 0
     for j, e_id in enumerate(events):
         if len(events[e_id].keys()) == 5:  # skip all events without all modalities
@@ -86,19 +83,13 @@ def write_datasplit_to_disk(events,
                         x = _lght_to_grid(x, 48)
                     # resize
                     x = list(np.transpose(x, (2, 0, 1)))
+                    target_size = 192
+                    if img_type == "vil":
+                        target_size = 384
                     arguments = [(xi, target_size) for xi in x]
                     with Pool(num_workers_for_pool) as p:
                         x = p.starmap(wrapper, arguments)  # resize
                     modality_data[img_type] = x
-                    localmin = np.inf
-                    localmax = -np.inf
-                    for xi in x:
-                        localmin = min(localmin, np.min(xi))
-                        localmax = max(localmax, np.max(xi))
-                    file_min.write(f"{localmin}\n")
-                    file_min.flush()
-                    file_max.write(f"{localmax}\n")
-                    file_max.flush()
 
             event_data = [np.array([modality_data[img_type][i] for img_type in img_types]) for i in
                           range(time_frames)]
