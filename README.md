@@ -6,11 +6,11 @@ Dataloaders are borrowed from [here](https://github.com/junyanz/pytorch-CycleGAN
 ## TODO
 
 - [x] train joint reconstruction
-- [ ] train MAML reconstruction
+- [x] train MAML reconstruction
 - [ ] train joint GAN
 - [ ] train MAML GAN
 - [x] eval joint reconstruction
-- [ ] eval MAML reconstruction
+- [x] eval MAML reconstruction
 - [ ] eval joint GAN
 - [ ] eval MAML GAN
 - [ ] load pretrained encoder

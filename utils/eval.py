@@ -34,5 +34,5 @@ def eval_maml_reconstruction(model, dataloader, opt):
                     'B': eval_batch['B'][task_idx, :, :, :, :],
                     }
             task_loss = adapt(model, task_data, opt)
-            total_loss += task_loss.item()
+            total_loss += task_loss.item() / opt.batch_size
     return total_loss / len(dataloader)

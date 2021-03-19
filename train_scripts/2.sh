@@ -13,5 +13,5 @@ python -u main.py \
         --resize_target \
         --target_size=384 \
 	--device=cuda \
-	--eval_freq=1000 \
+	--eval_freq=100 \
 	--fraction_dataset=1
