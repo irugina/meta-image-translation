@@ -14,8 +14,7 @@ Dataloaders are borrowed from [here](https://github.com/junyanz/pytorch-CycleGAN
 - [ ] eval joint GAN
 - [ ] eval MAML GAN
 - [ ] load pretrained encoder
-- [ ] miniimagenet
-
-## SEVIR dataset issue:
-
-I am currently manipulating tensors in ```__getitem__``` when sampling from sevir because I needed to preprocess the data: its spec has changed since when I saved SEVIR to disk. I think all intermediate results get moved to CUDA though - so this might be an issue worth addressing, because it might improve speed, the allowed batch size, as well as code simplicity. We should generate SEVIR for few-shot once again and make it match our setting.
+- [ ] save opt to disk
+- [ ] sweep number_inner_steps for sevir
+- [ ] add miniimagenet dataloader
+- [ ] redo SEVIR dataset
