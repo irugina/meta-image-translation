@@ -20,8 +20,12 @@ class SevirDataset(data.Dataset):
             opt (Option class) -- stores all the experiment flags; needs to be a subclass of BaseOptions
         """
         self.opt = opt
+        # save opt to avoid mutability bug
+        self.fraction_dataset = opt.fraction_dataset
+        self.phase = opt.phase
+        # folder setup
         self.root = opt.dataroot
-        self.dir_AB = os.path.join(opt.dataroot, opt.phase)  # get the image directory
+        self.dir_AB = os.path.join(opt.dataroot, self.phase)  # get the image directory
         self.AB_paths = sorted(make_dataset(self.dir_AB))  # get image paths
         assert(self.opt.load_size >= self.opt.crop_size)   # crop_size should be smaller than the size of loaded image
         self.input_nc = self.opt.input_nc
@@ -33,6 +37,7 @@ class SevirDataset(data.Dataset):
         ind_to_type = {0: 'vis', 1: 'ir069', 2: 'ir107', 3: 'vil', 4: 'lght'}
         for key, value in ind_to_type.items():
             self.znorm[value] = (znorm_mu_sevir[key], znorm_sigma_sevir[key])
+
 
     def __getitem__(self, index):
         """Return a data point and its metadata information.
@@ -80,6 +85,6 @@ class SevirDataset(data.Dataset):
 
     def __len__(self):
         """Return the total number of images in the dataset."""
-        return int(len(self.AB_paths) / self.opt.fraction_dataset)
+        return int(len(self.AB_paths) / self.fraction_dataset)
 
 

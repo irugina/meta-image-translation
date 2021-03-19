@@ -25,6 +25,12 @@ if __name__ == "__main__":
     parser.add_argument('--beta1', type=float, default=0.5, help='momentum term of adam')
     parser.add_argument('--lr', type=float, default=0.0002, help='initial learning rate for adam')
     parser.add_argument('--eval_freq', type=int, required=True)
+    #MAML
+    parser.add_argument('--inner_steps', type=int, default='1')
+    parser.add_argument('--inner_lr', type=float, default=0.0001)
+    parser.add_argument('--first_order', action='store_true')
+    parser.add_argument('--allow_unused', action='store_true')
+    parser.add_argument('--allow_nograd', action='store_true')
     # ------------------------------------------------------------------------------------------------data
     # filepaths
     parser.add_argument('--dataroot', type=str,
@@ -34,7 +40,6 @@ if __name__ == "__main__":
     parser.add_argument('--load_size', type=int, default=192)
     parser.add_argument('--crop_size', type=int, default=192)
     parser.add_argument('--fraction_dataset', type=int, default=1)
-    parser.add_argument('--frames_per_event', type=int, default=49)
     # translation setup details
     parser.add_argument('--input_nc', type=int, default=3)
     parser.add_argument('--output_nc', type=int, default=1)
@@ -58,13 +63,21 @@ if __name__ == "__main__":
     model = Unet().to(opt.device)
 
     # data
-    dataset = SevirDataset(opt)
-    train_dataloader = DataLoader(dataset, batch_size=opt.batch_size)
+    train_dataset = SevirDataset(opt)
+    train_dataloader = DataLoader(train_dataset, batch_size=opt.batch_size)
+
     # hack to create eval dataloader in this script
     opt.phase = "valid"
-    eval_dataloader = DataLoader(SevirDataset(opt), batch_size=opt.batch_size)
+    init_fraction_dataset = opt.fraction_dataset
+    opt.fraction_dataset = 10;
+    eval_dataset = SevirDataset(opt)
+    eval_dataloader = DataLoader(eval_dataset, batch_size=opt.batch_size)
     opt.phase = "train"
+    opt.fraction_dataset = init_fraction_dataset;
+
+    print ("{} train tasks".format(len(train_dataloader)))
+    print ("{} eval tasks".format(len(eval_dataloader)))
 
     # train
     train_fn = eval("train_{}_{}".format(opt.optimization, opt.loss_function))
-    train_fn(model, train_dataloader, eval_dataloader, opt.device, opt)
+    train_fn(model, train_dataloader, eval_dataloader, opt)
