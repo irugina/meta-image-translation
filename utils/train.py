@@ -5,6 +5,14 @@ from torch.optim import Adam
 from utils.eval import *
 from utils.l2l import *
 
+def make_checkpoint(model, opt, eval_dataloader, total_steps, count):
+    torch.save(model.state_dict(), opt.checkpoint + "checkpoint_{}.pt".format(count))
+    eval_fn = eval("eval_{}_{}".format(opt.optimization, opt.loss_function))
+    print ("evaluating...")
+    eval_loss = eval_fn(model, eval_dataloader, opt)
+    print ("loss at step {} out of {} was {}".format(count, total_steps, eval_loss))
+
+
 def train_joint_adversarial():
     pass
 
@@ -13,7 +21,6 @@ def train_maml_adversarial():
 
 def train_joint_reconstruction(model, train_dataloader, eval_dataloader, opt):
     loss_fn = torch.nn.L1Loss()
-    eval_fn = eval("eval_{}_{}".format(opt.optimization, opt.loss_function))
     optimizer = Adam(model.parameters(), lr=opt.lr, betas=(opt.beta1, 0.999))
     for count, train_batch in enumerate(train_dataloader):
         # flatten first two axis - don't care about per event classification of different frames
@@ -28,12 +35,10 @@ def train_joint_reconstruction(model, train_dataloader, eval_dataloader, opt):
         optimizer.step()
         # eval
         if count % opt.eval_freq == 0:
-            print ("evaluating...")
-            print ("loss = ", eval_fn(model, eval_dataloader, opt))
+            make_checkpoint(model, opt, eval_dataloader, len(train_dataloader), count)
 
 def train_maml_reconstruction(model, train_dataloader, eval_dataloader, opt):
     loss_fn = torch.nn.L1Loss()
-    eval_fn = eval("eval_{}_{}".format(opt.optimization, opt.loss_function))
     optimizer = Adam(model.parameters(), lr=opt.lr, betas=(opt.beta1, 0.999))
     for count, train_batch in enumerate(train_dataloader):
        # data is meta-batch of train tasks - adapt and track loss on each
@@ -52,9 +57,4 @@ def train_maml_reconstruction(model, train_dataloader, eval_dataloader, opt):
        optimizer.step()
        # eval
        if count % opt.eval_freq == 0:
-           print ("evaluating...")
-           print ("loss = ", eval_fn(model, eval_dataloader, opt))
-
-
-
-
+            make_checkpoint(model, opt, eval_dataloader, len(train_dataloader), count)

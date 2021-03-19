@@ -25,12 +25,14 @@ if __name__ == "__main__":
     parser.add_argument('--beta1', type=float, default=0.5, help='momentum term of adam')
     parser.add_argument('--lr', type=float, default=0.0002, help='initial learning rate for adam')
     parser.add_argument('--eval_freq', type=int, required=True)
-    #MAML
+    # MAML
     parser.add_argument('--inner_steps', type=int, default='1')
     parser.add_argument('--inner_lr', type=float, default=0.0001)
     parser.add_argument('--first_order', action='store_true')
     parser.add_argument('--allow_unused', action='store_true')
     parser.add_argument('--allow_nograd', action='store_true')
+    # save models and sample images to disk
+    parser.add_argument('--checkpoint', type=str, required=True)
     # ------------------------------------------------------------------------------------------------data
     # filepaths
     parser.add_argument('--dataroot', type=str,
@@ -81,3 +83,4 @@ if __name__ == "__main__":
     # train
     train_fn = eval("train_{}_{}".format(opt.optimization, opt.loss_function))
     train_fn(model, train_dataloader, eval_dataloader, opt)
+    torch.save(model.state_dict(), opt.checkpoint + "checkpoint_last.pt")

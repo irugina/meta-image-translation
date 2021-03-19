@@ -14,4 +14,5 @@ python -u main.py \
         --target_size=384 \
 	--device=cuda \
 	--eval_freq=100 \
-	--fraction_dataset=1
+	--fraction_dataset=1 \
+	--checkpoint=reconstruction_maml/
