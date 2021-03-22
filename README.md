@@ -14,7 +14,7 @@ Dataloaders are borrowed from [here](https://github.com/junyanz/pytorch-CycleGAN
 - [ ] eval joint GAN
 - [ ] eval MAML GAN
 - [ ] load pretrained encoder
-- [ ] save opt to disk
-- [ ] sweep number_inner_steps for sevir
+- [x] save opt to disk
+- [x] sweep number_inner_steps for sevir
 - [ ] add miniimagenet dataloader
 - [ ] redo SEVIR dataset

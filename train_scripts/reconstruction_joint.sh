@@ -1,8 +1,8 @@
 #!/bin/sh
 #SBATCH --cpus-per-task=20
 #SBATCH --gres=gpu:volta:1
-#SBATCH -o logs/1_train.out
-#SBATCH --job-name=1_train
+#SBATCH -o logs/reconstruction_joint_train.out
+#SBATCH --job-name=reconstruction_joint__train
 
 python -u train_unet.py \
 	--batch_size=4 \

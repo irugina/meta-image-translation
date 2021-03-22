@@ -22,7 +22,7 @@ if __name__ == "__main__":
     parser.add_argument('--batch_size', type=int, required=True)
     parser.add_argument('--optimization', type=str, required=True)
     parser.add_argument('--loss_function', type=str, required=True)
-    parser.add_argument('--n_epochs', type=int, default=10, help='number of epochs with the initial learning rate')
+    parser.add_argument('--n_epochs', type=int, default=2, help='number of epochs with the initial learning rate')
     parser.add_argument('--beta1', type=float, default=0.5, help='momentum term of adam')
     parser.add_argument('--lr', type=float, default=0.0002, help='initial learning rate for adam')
     parser.add_argument('--eval_freq', type=int, required=True)
@@ -90,5 +90,9 @@ if __name__ == "__main__":
 
     # train
     train_fn = eval("train_{}_{}".format(opt.optimization, opt.loss_function))
-    train_fn(model, train_dataloader, eval_dataloader, opt)
+    for _ in range(opt.n_epochs):
+        t1 = time.time()
+        train_fn(model, train_dataloader, eval_dataloader, opt)
+        t2 = time.time()
+        print ("one epoch took {} seconds".format(t2-t1))
     torch.save(model.state_dict(), opt.checkpoint + "checkpoint_last.pt")
