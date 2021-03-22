@@ -1,6 +1,7 @@
 import time
 import os
 import argparse
+import json
 
 import numpy as np
 from torch.utils.data import DataLoader
@@ -33,6 +34,9 @@ if __name__ == "__main__":
     parser.add_argument('--allow_nograd', action='store_true')
     # save models and sample images to disk
     parser.add_argument('--checkpoint', type=str, required=True)
+    # load pretrained encoder
+    parser.add_argument('--pretrained_encoder', action='store_true')
+    parser.add_argument('--encoder_checkpoint', type=str, default='')
     # ------------------------------------------------------------------------------------------------data
     # filepaths
     parser.add_argument('--dataroot', type=str,
@@ -54,12 +58,16 @@ if __name__ == "__main__":
 
     opt = parser.parse_args()
     print (opt)
+    with open(opt.checkpoint + "opt.txt", 'w') as f:
+        json.dump(opt.__dict__, f, indent=2)
 
     # sanity checks for scripts
     assert opt.optimization in {'joint', 'maml'}
     assert opt.loss_function in {'reconstruction', 'adversarial'}
     if opt.resize_target:
         assert opt.target_size != -1
+    if opt.pretrained_encoder:
+        assert opt.encoder_checkpoint != ''
 
     # model
     model = Unet().to(opt.device)

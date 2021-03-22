@@ -1,10 +1,10 @@
 #!/bin/sh
-#SBATCH --cpus-per-task=40
-#SBATCH --gres=gpu:volta:2
-#SBATCH -o logs/2.out
-#SBATCH --job-name=2
+#SBATCH --cpus-per-task=20
+#SBATCH --gres=gpu:volta:1
+#SBATCH -o logs/2_train.out
+#SBATCH --job-name=2_train
 
-python -u main.py \
+python -u train_unet.py \
 	--batch_size=4 \
 	--n_support=10 \
 	--n_query=10 \
