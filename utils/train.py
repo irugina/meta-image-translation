@@ -5,12 +5,12 @@ from torch.optim import Adam
 from utils.eval import *
 from utils.l2l import *
 
-def make_checkpoint(model, opt, eval_dataloader, total_steps, count):
-    torch.save(model.state_dict(), opt.checkpoint + "checkpoint_{}.pt".format(count))
+def make_checkpoint(model, opt, eval_dataloader, total_steps, count, epoch):
+    torch.save(model.state_dict(), opt.checkpoint + "checkpoint_epoch_{}_step_{}.pt".format(epoch, count))
     eval_fn = eval("eval_{}_{}".format(opt.optimization, opt.loss_function))
     print ("evaluating...")
     eval_loss = eval_fn(model, eval_dataloader, opt)
-    print ("loss at step {} out of {} was {}".format(count, total_steps, eval_loss))
+    print ("loss at epoch {}, step {} out of {}, was {}".format(epoch, count, total_steps, eval_loss))
 
 
 def train_joint_adversarial():
@@ -19,7 +19,7 @@ def train_joint_adversarial():
 def train_maml_adversarial():
     pass
 
-def train_joint_reconstruction(model, train_dataloader, eval_dataloader, opt):
+def train_joint_reconstruction(model, train_dataloader, eval_dataloader, opt, epoch):
     loss_fn = torch.nn.L1Loss()
     optimizer = Adam(model.parameters(), lr=opt.lr, betas=(opt.beta1, 0.999))
     for count, train_batch in enumerate(train_dataloader):
@@ -35,9 +35,16 @@ def train_joint_reconstruction(model, train_dataloader, eval_dataloader, opt):
         optimizer.step()
         # eval
         if count % opt.eval_freq == 0:
-            make_checkpoint(model, opt, eval_dataloader, len(train_dataloader), count)
+            make_checkpoint(model, opt, eval_dataloader, len(train_dataloader), count, epoch)
 
-def train_maml_reconstruction(model, train_dataloader, eval_dataloader, opt):
+    # also save end of epoch checkpoint
+    torch.save(model.state_dict(), opt.checkpoint + "checkpoint_epoch_{}.pt".format(epoch))
+    eval_fn = eval("eval_{}_{}".format(opt.optimization, opt.loss_function))
+    print ("evaluating...")
+    eval_loss = eval_fn(model, eval_dataloader, opt)
+    print ("loss at end of epoch {} was {}".format(epoch, eval_loss))
+
+def train_maml_reconstruction(model, train_dataloader, eval_dataloader, opt, epoch):
     loss_fn = torch.nn.L1Loss()
     optimizer = Adam(model.parameters(), lr=opt.lr, betas=(opt.beta1, 0.999))
     for count, train_batch in enumerate(train_dataloader):
@@ -57,4 +64,4 @@ def train_maml_reconstruction(model, train_dataloader, eval_dataloader, opt):
        optimizer.step()
        # eval
        if count % opt.eval_freq == 0:
-            make_checkpoint(model, opt, eval_dataloader, len(train_dataloader), count)
+            make_checkpoint(model, opt, eval_dataloader, len(train_dataloader), count, epoch)

@@ -78,21 +78,18 @@ if __name__ == "__main__":
 
     # hack to create eval dataloader in this script
     opt.phase = "valid"
-    init_fraction_dataset = opt.fraction_dataset
-    opt.fraction_dataset = 10;
     eval_dataset = SevirDataset(opt)
     eval_dataloader = DataLoader(eval_dataset, batch_size=opt.batch_size)
     opt.phase = "train"
-    opt.fraction_dataset = init_fraction_dataset;
 
     print ("{} train tasks".format(len(train_dataloader)))
     print ("{} eval tasks".format(len(eval_dataloader)))
 
     # train
     train_fn = eval("train_{}_{}".format(opt.optimization, opt.loss_function))
-    for _ in range(opt.n_epochs):
+    for epoch in range(opt.n_epochs):
         t1 = time.time()
-        train_fn(model, train_dataloader, eval_dataloader, opt)
+        train_fn(model, train_dataloader, eval_dataloader, opt, epoch)
         t2 = time.time()
         print ("one epoch took {} seconds".format(t2-t1))
     torch.save(model.state_dict(), opt.checkpoint + "checkpoint_last.pt")
