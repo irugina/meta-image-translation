@@ -70,7 +70,18 @@ if __name__ == "__main__":
         assert opt.encoder_checkpoint != ''
 
     # model
-    model = Unet().to(opt.device)
+    model = Unet()
+    if opt.pretrained_encoder:
+        # load pretained encoder
+        save_dict = torch.load(opt.encoder_checkpoint, map_location='cpu')
+        # filter for keys we have in model
+        saved_dict = {k[9:]: v for k, v in save_dict['state_dict'].items() if
+                (k.startswith('backbone.') and ('inc' in k or 'down' in k))}
+        # update model
+        model_state = model.state_dict()
+        model_state.update(saved_dict)
+        model.load_state_dict(model_state)
+    model = model.to(opt.device)
 
     # data
     train_dataset = SevirDataset(opt)
