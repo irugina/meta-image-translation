@@ -1,5 +1,7 @@
 *.out
 *.npy
+reconstruction*
+pretained*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

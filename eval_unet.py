@@ -26,7 +26,7 @@ if __name__ == "__main__":
 
     # model
     model = Unet()
-    model.load_state_dict(torch.load(opt.checkpoint + "checkpoint_500.pt")) #todo
+    model.load_state_dict(torch.load(opt.checkpoint + "checkpoint_last.pt"))
     model = model.to(opt.device)
     model.eval()
 
@@ -64,8 +64,8 @@ if __name__ == "__main__":
         results[key] /= len(eval_dataloader)
     print (results)
     # save samples to disk
-    np.save('prediction', prediction.detach().cpu().numpy())
-    np.save('target', tgt_img.detach().cpu().numpy())
+    np.save(opt.checkpoint + 'prediction', prediction.detach().cpu().numpy())
+    np.save(opt.checkpoint + 'target', tgt_img.detach().cpu().numpy())
 
 
 
