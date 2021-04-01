@@ -1,13 +1,7 @@
 *.out
 *.npy
-reconstruction_maml_1-inner-step_2-bsz_train/
-reconstruction_maml_3-inner-step_2-bsz_train/
-reconstruction_maml_5-inner-step_2-bsz_train/
-reconstruction_maml_1-inner-step_4-bsz_train/
-reconstruction_maml_3-inner-step_4-bsz_train/
-pretained_reconstruction_joint_0.0_0.03_epoch_100/
-reconstruction_joint/
 draft.ipynb
+checkpoints/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

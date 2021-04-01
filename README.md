@@ -5,6 +5,7 @@ Dataloaders are borrowed from [here](https://github.com/junyanz/pytorch-CycleGAN
 
 ## TODO
 
+- [ ] improve bookkeping: create results dir; use os.path.join()
 - [x] train joint reconstruction
 - [x] train MAML reconstruction
 - [ ] train joint GAN
