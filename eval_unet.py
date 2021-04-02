@@ -43,7 +43,6 @@ if __name__ == "__main__":
 
     # data
     opt.phase = "test"
-    opt.fraction_dataset = 100
     test_dataset = SevirDataset(opt)
     test_dataloader = DataLoader(test_dataset, batch_size=opt.batch_size)
 
@@ -59,7 +58,7 @@ if __name__ == "__main__":
         results[key] = 0
 
     # compute metrics
-    for test_batch in test_dataloader:
+    for count, test_batch in enumerate(test_dataloader):
         # flatten first two axis - don't care about per event classification of different frames
         src_img = test_batch['A'].view(-1, *(test_batch['A'].size()[2:])).float()
         tgt_img = test_batch['B'].view(-1, *(test_batch['B'].size()[2:])).float()
@@ -74,6 +73,12 @@ if __name__ == "__main__":
         metrics = compute_metrics(tgt_img, prediction, metric_functions)
         for key in results:
             results[key] += metrics[key]
+
+        if (count + 1) % 10 == 0:
+            # norm by number of batches
+            for key in results:
+                print ("for key {} estimate after {} test batches is {}".format(key, count, results[key] / count))
+
     # norm by number of batches
     for key in results:
         results[key] /= len(test_dataloader)

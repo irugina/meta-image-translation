@@ -5,4 +5,5 @@
 #SBATCH --job-name=reconstruction_joint_eval
 
 python -u eval_unet.py \
-	--checkpoint=reconstruction_joint/
+	--checkpoint=reconstruction_joint/ \
+        --log=logs/reconstruction_joint_train.out
