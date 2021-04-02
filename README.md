@@ -14,8 +14,12 @@ Dataloaders are borrowed from [here](https://github.com/junyanz/pytorch-CycleGAN
 - [x] eval MAML reconstruction
 - [ ] eval joint GAN
 - [ ] eval MAML GAN
-- [ ] load pretrained encoder
+- [x] load pretrained encoder
 - [x] save opt to disk
 - [x] sweep number_inner_steps for sevir
 - [ ] add miniimagenet dataloader
 - [ ] redo SEVIR dataset
+- [ ] test on MAML (e.g. implement inner loop in eval\_unet)
+- [ ] test contrastive pretrainig after limiting train set
+- [ ] MAML + pretraining
+- [ ] test pretrained backbones from multiple epochs (?)
