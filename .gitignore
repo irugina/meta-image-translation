@@ -2,6 +2,7 @@
 *.npy
 draft.ipynb
 checkpoints/
+*.png
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
