@@ -24,7 +24,7 @@ if __name__ == "__main__":
     opt = parser.parse_args()
     log_path = opt.log
 
-    with open("checkpoints/" + opt.checkpoint + "opt.txt", 'r') as f:
+    with open(os.path.join(opt.checkpoint, "opt.txt"), 'r') as f:
         opt.__dict__ = json.load(f)
 
     # find checkpoint to load
@@ -37,7 +37,7 @@ if __name__ == "__main__":
 
     # model
     model = Unet()
-    model.load_state_dict(torch.load("checkpoints/" + os.path.join(opt.checkpoint, "checkpoint_epoch_{}_step_{}.pt".format(epoch, step))))
+    model.load_state_dict(torch.load(os.path.join(opt.checkpoint, "checkpoint_epoch_{}_step_{}.pt".format(epoch, step))))
     model = model.to(opt.device)
     model.eval()
 
@@ -84,8 +84,8 @@ if __name__ == "__main__":
         results[key] /= len(test_dataloader)
     print (results)
     # save samples to disk
-    np.save("checkpoints/" + os.path.join(opt.checkpoint + 'prediction'), prediction.detach().cpu().numpy())
-    np.save("checkpoints/" + os.path.join(opt.checkpoint + 'target'), tgt_img.detach().cpu().numpy())
+    np.save(os.path.join(opt.checkpoint, 'prediction'), prediction.detach().cpu().numpy())
+    np.save(os.path.join(opt.checkpoint, 'target'), tgt_img.detach().cpu().numpy())
 
 
 
