@@ -290,11 +290,12 @@ def adapt_adversarial(model, opt, data):
         # compute fake_B's for source split
         source_fake_B = G_learner(source_real_A)  # G(A)
         # ------------------------------------------------ adapt discriminator D_learner using source split ------------------------------------------------
-        fake_AB = torch.cat((source_real_A, source_fake_B), 1)  # we use conditional GANs; we need to feed both input and output to the discriminator
+        resized_source_real_A = nn.Upsample(scale_factor=2, mode='bilinear') (source_real_A)
+        fake_AB = torch.cat((resized_source_real_A, source_fake_B), 1)  # we use conditional GANs; we need to feed both input and output to the discriminator
         pred_fake = D_learner(fake_AB.detach()) # stop backprop to the generator by detaching fake_B
         loss_D_fake = criterionGAN(pred_fake, False)
         # Real
-        real_AB = torch.cat((source_real_A, source_real_B), 1)
+        real_AB = torch.cat((resized_source_real_A, source_real_B), 1)
         pred_real = D_learner(real_AB)
         loss_D_real = criterionGAN(pred_real, True)
         # combine loss
@@ -319,13 +320,14 @@ def adapt_adversarial(model, opt, data):
         # update G_learner
         update_module(G_learner)
     # compute fake_B's for query split
+    resized_query_real_A = nn.Upsample(scale_factor=2, mode='bilinear') (query_real_A)
     query_fake_B = G_learner(query_real_A)  # G(A)
     # ------------------------------------------------ compute loss on query split for discriminator ------------------------------------------------
-    fake_AB = torch.cat((query_real_A, query_fake_B), 1)  # we use conditional GANs; we need to feed both input and output to the discriminator
+    fake_AB = torch.cat((resized_query_real_A, query_fake_B), 1)  # we use conditional GANs; we need to feed both input and output to the discriminator
     pred_fake = D_learner(fake_AB.detach())
-    loss_D_fake = self.criterionGAN(pred_fake, False)
+    loss_D_fake = criterionGAN(pred_fake, False)
     # Real
-    real_AB = torch.cat((query_real_A, query_real_B), 1)
+    real_AB = torch.cat((resized_query_real_A, query_real_B), 1)
     pred_real = D_learner(real_AB)
     loss_D_real = criterionGAN(pred_real, True)
     # combine loss
@@ -338,5 +340,5 @@ def adapt_adversarial(model, opt, data):
     # combine loss
     loss_G = loss_G_GAN + loss_G_L1
 
-    return loss_D, loss_G, D_learner, G_learner
+    return loss_D, loss_G, loss_G_L1, D_learner, G_learner
 
