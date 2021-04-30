@@ -14,6 +14,7 @@ def parse_train_args():
     parser.add_argument('--beta1', type=float, default=0.5, help='momentum term of adam')
     parser.add_argument('--lr', type=float, default=0.0002, help='initial learning rate for adam')
     parser.add_argument('--eval_freq', type=int, required=True)
+    parser.add_argument('--lambda_L1', type=float, default=100)
     # MAML
     parser.add_argument('--inner_steps', type=int, default='1')
     parser.add_argument('--inner_lr', type=float, default=0.0001)

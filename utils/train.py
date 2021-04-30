@@ -5,19 +5,67 @@ from torch.optim import Adam
 from utils.eval import *
 from utils.l2l import *
 
-def make_checkpoint(model, opt, eval_dataloader, total_steps, count, epoch):
-    torch.save(model.state_dict(), opt.checkpoint + "checkpoint_epoch_{}_step_{}.pt".format(epoch, count))
+import os
+
+def make_checkpoint_reconstruction(model, opt, eval_dataloader, total_steps, count, epoch):
     eval_fn = eval("eval_{}_{}".format(opt.optimization, opt.loss_function))
     print ("evaluating...")
     eval_loss = eval_fn(model, eval_dataloader, opt)
-    print ("loss at epoch {}, step {} out of {}, was {}".format(epoch, count, total_steps, eval_loss))
+    if count  == -1:
+        torch.save(model.state_dict(), os.path.join(opt.checkpoint, "checkpoint_epoch_{}.pt".format(epoch)))
+        print ("loss at epoch {} was {}".format(epoch, eval_loss))
+    else:
+        torch.save(model.state_dict(), os.path.join(opt.checkpoint, "checkpoint_epoch_{}_step_{}.pt".format(epoch, count)))
+        print ("loss at epoch {}, step {} out of {}, was {}".format(epoch, count, total_steps, eval_loss))
 
 
-def train_joint_adversarial():
+def make_checkpoint_adversarial(model, opt, eval_dataloader, total_steps, count, epoch):
+    generator, discriminator = model
+    eval_fn = eval("eval_{}_{}".format(opt.optimization, opt.loss_function))
+    print ("evaluating...")
+    eval_loss = eval_fn(model, eval_dataloader, opt)
+    if count  == -1:
+        torch.save(generator.state_dict(), os.path.join(opt.checkpoint, "generator_epoch_{}.pt".format(epoch)))
+        torch.save(discriminator.state_dict(), os.path.join(opt.checkpoint, "discriminator_epoch_{}.pt".format(epoch)))
+        print ("loss at epoch {} was {}".format(epoch, eval_loss))
+    else:
+        torch.save(generator.state_dict(), os.path.join(opt.checkpoint, "generator_epoch_{}_step_{}.pt".format(epoch, count)))
+        torch.save(discriminator.state_dict(), os.path.join(opt.checkpoint, "discriminator_epoch_{}_step_{}.pt".format(epoch, count)))
+        print ("loss at epoch {}, step {} out of {}, was {}".format(epoch, count, total_steps, eval_loss))
+
+
+
+def train_joint_adversarial(model, train_dataloader, eval_dataloader, opt, epoch):
     pass
 
-def train_maml_adversarial():
-    pass
+def train_maml_adversarial(model, train_dataloader, eval_dataloader, opt, epoch):
+    generator, discriminator = model
+    # optimizers for generator and discriminator, respectively
+    optimizer_G = Adam(generator.parameters(), lr=opt.lr, betas=(opt.beta1, 0.999))
+    optimizer_D = Adam(discriminator.parameters(), lr=opt.lr, betas=(opt.beta1, 0.999))
+    for count, train_batch in enumerate(train_dataloader):
+        loss_D, loss_G = 0,0
+        for task_idx in range(train_batch['A'].size()[0]): #for each train task
+            task_data = {
+                    'A': train_batch['A'][task_idx, :, :, :, :],
+                    'B': train_batch['B'][task_idx, :, :, :, :],
+                }
+            task_loss_D, task_loss_G, _, _, _ = adapt_adversarial(model, opt, task_data)
+            loss_D += task_loss_D; loss_G += task_loss_G
+        # perform outer loop
+        loss_D /= opt.batch_size
+        loss_G /= opt.batch_size
+        optimizer_D.zero_grad()
+        optimizer_G.zero_grad()
+        loss_D.backward(retain_graph=True)
+        loss_G.backward()
+        optimizer_D.step()
+        optimizer_G.step()
+        # eval
+        if count % opt.eval_freq == 0:
+            make_checkpoint_adversarial(model, opt, eval_dataloader, len(train_dataloader), count, epoch)
+    # also save end of epoch checkpoint
+    make_checkpoint_adversarial(model, opt, eval_dataloader, len(train_dataloader), -1, epoch)
 
 def train_joint_reconstruction(model, train_dataloader, eval_dataloader, opt, epoch):
     loss_fn = torch.nn.L1Loss()
@@ -35,14 +83,9 @@ def train_joint_reconstruction(model, train_dataloader, eval_dataloader, opt, ep
         optimizer.step()
         # eval
         if count % opt.eval_freq == 0:
-            make_checkpoint(model, opt, eval_dataloader, len(train_dataloader), count, epoch)
-
+            make_checkpoint_reconstruction(model, opt, eval_dataloader, len(train_dataloader), count, epoch)
     # also save end of epoch checkpoint
-    torch.save(model.state_dict(), opt.checkpoint + "checkpoint_epoch_{}.pt".format(epoch))
-    eval_fn = eval("eval_{}_{}".format(opt.optimization, opt.loss_function))
-    print ("evaluating...")
-    eval_loss = eval_fn(model, eval_dataloader, opt)
-    print ("loss at end of epoch {} was {}".format(epoch, eval_loss))
+    make_checkpoint_reconstruction(model, opt, eval_dataloader, len(train_dataloader), -1, epoch)
 
 def train_maml_reconstruction(model, train_dataloader, eval_dataloader, opt, epoch):
     loss_fn = torch.nn.L1Loss()
@@ -55,7 +98,7 @@ def train_maml_reconstruction(model, train_dataloader, eval_dataloader, opt, epo
                    'A': train_batch['A'][task_idx, :, :, :, :],
                    'B': train_batch['B'][task_idx, :, :, :, :],
                    }
-           task_loss = adapt(model, task_data, opt)
+           task_loss = adapt_reconstruction(model, task_data, opt)
            loss += task_loss
        # perform outer loop optimization
        loss /= opt.batch_size
@@ -64,4 +107,6 @@ def train_maml_reconstruction(model, train_dataloader, eval_dataloader, opt, epo
        optimizer.step()
        # eval
        if count % opt.eval_freq == 0:
-            make_checkpoint(model, opt, eval_dataloader, len(train_dataloader), count, epoch)
+            make_checkpoint_reconstruction(model, opt, eval_dataloader, len(train_dataloader), count, epoch)
+    # also save end of epoch checkpoint
+    make_checkpoint_reconstruction(model, opt, eval_dataloader, len(train_dataloader), -1, epoch)
