@@ -13,7 +13,9 @@ def eval_maml_adversarial(model, dataloader, opt):
                     'B': eval_batch['B'][task_idx, :, :, :, :],
                 }
             task_loss_D, task_loss_G, task_loss_G_L1, _, _ = adapt_adversarial(model, opt, task_data)
-            loss_D += task_loss_D.item(); loss_G += task_loss_G.item(); loss_G_L1 += task_loss_G_L1.item()
+            loss_D += task_loss_D.item() / opt.batch_size
+            loss_G += task_loss_G.item() / opt.batch_size
+            loss_G_L1 += task_loss_G_L1.item() / opt.batch_size
     return loss_D / len(dataloader), loss_G / len(dataloader), loss_G_L1 / len(dataloader)
 
 def eval_joint_reconstruction(model, dataloader, opt):
