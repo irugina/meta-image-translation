@@ -35,6 +35,9 @@ if __name__ == "__main__":
     epoch = int(line[3][0:-1])
     step = int(line[5])
 
+    if "checkpoint" not in opt.checkpoint:
+        opt.checkpoint = os.path.join("checkpoints", opt.checkpoint)
+
     # model
     model = Unet()
     model.load_state_dict(torch.load(os.path.join(opt.checkpoint, "checkpoint_epoch_{}_step_{}.pt".format(epoch, step))))
