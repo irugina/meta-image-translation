@@ -48,7 +48,7 @@ if __name__ == "__main__":
     # hack to create eval dataloader in this script
     opt.phase = "valid"
     eval_dataset = SevirDataset(opt)
-    eval_dataloader = DataLoader(eval_dataset, batch_size=opt.batch_size)
+    eval_dataloader = DataLoader(eval_dataset, batch_size=1) # help with oom
     opt.phase = "train"
 
     print ("{} train tasks".format(len(train_dataloader)))
