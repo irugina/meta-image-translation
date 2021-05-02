@@ -10,7 +10,7 @@ from torch.optim import Adam
 
 # local imports
 from data.sevir_dataset import SevirDataset
-from models.sevir import Unet
+from models.sevir_generator import Unet
 from utils.train import *
 from utils.eval import *
 from metrics.metric import *
@@ -74,18 +74,16 @@ if __name__ == "__main__":
         for key in results:
             results[key] += metrics[key]
 
-        if (count + 1) % 10 == 0:
+        if (count + 1) % 20 == 0:
             # norm by number of batches
             for key in results:
                 print ("for key {} estimate after {} test batches is {}".format(key, count, results[key] / count))
+            # save samples to disk
+            np.save(os.path.join(opt.checkpoint, 'source_{}'.format(count)), src_img.detach().cpu().numpy())
+            np.save(os.path.join(opt.checkpoint, 'prediction_{}'.format(count)), prediction.detach().cpu().numpy())
+            np.save(os.path.join(opt.checkpoint, 'target_{}'.format(count)), tgt_img.detach().cpu().numpy())
 
     # norm by number of batches
     for key in results:
         results[key] /= len(test_dataloader)
     print (results)
-    # save samples to disk
-    np.save(os.path.join(opt.checkpoint, 'prediction'), prediction.detach().cpu().numpy())
-    np.save(os.path.join(opt.checkpoint, 'target'), tgt_img.detach().cpu().numpy())
-
-
-
