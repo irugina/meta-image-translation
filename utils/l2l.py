@@ -250,7 +250,7 @@ def compute_gradients(module, loss, opt):
     return gradients
 
 
-def adapt_reconstruction(model, data, opt):
+def adapt_reconstruction(model, data, opt, test_time=False):
     loss_fn = torch.nn.L1Loss()
     # clone model
     learner = clone_module(model)
@@ -270,10 +270,13 @@ def adapt_reconstruction(model, data, opt):
         compute_updates(learner, grads, opt)
         # apply 1st order updates to learner
         update_module(learner)
-    loss = loss_fn(source_real_B, source_fake_B)
+    query_fake_B = learner(query_real_A)
+    loss = loss_fn(query_real_B, query_fake_B)
+    if test_time:
+        return query_real_A, query_fake_B, query_real_B
     return loss
 
-def adapt_adversarial(model, opt, data):
+def adapt_adversarial(model, opt, data, test_time=False):
     criterionGAN = GANLoss('vanilla').to(opt.device)
     criterionL1 = torch.nn.L1Loss()
     # clone G and D
@@ -340,5 +343,7 @@ def adapt_adversarial(model, opt, data):
     # combine loss
     loss_G = loss_G_GAN + loss_G_L1
 
+    if test_time:
+        return query_real_A, query_fake_B, query_real_B
     return loss_D, loss_G, loss_G_L1, D_learner, G_learner
 
