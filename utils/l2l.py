@@ -257,13 +257,13 @@ def adapt_reconstruction(model, data, opt, test_time=False):
     # unpack task and put on cuda
     real_A = data['A'].to(opt.device)
     real_B = data['B'].to(opt.device)
-    source_real_A, source_real_B = real_A[0:opt.n_support, :, :, :], real_B[0:opt.n_support, :, :, :]
-    query_real_A , query_real_B  = real_A[opt.n_support:, :, :, :], real_B[opt.n_support:, :, :, :]
+    support_real_A, support_real_B = real_A[0:opt.n_support, :, :, :], real_B[0:opt.n_support, :, :, :]
+    query_real_A , query_real_B  = real_A[opt.n_support:opt.n_support+opt.n_query, :, :, :], real_B[opt.n_support:opt.n_support+opt.n_query, :, :, :]
     # adapt learner on support frames
     for i in range(opt.inner_steps):
-        # compute fake_B's for source split
-        source_fake_B = learner(source_real_A)
-        loss = loss_fn(source_real_B, source_fake_B)
+        # compute fake_B's for support split
+        support_fake_B = learner(support_real_A)
+        loss = loss_fn(support_real_B, support_fake_B)
         # compute gradients for learner
         grads = compute_gradients(learner, loss, opt)
         # populate .update attributes in learner
@@ -286,19 +286,19 @@ def adapt_adversarial(model, opt, data, test_time=False):
     # get A and B
     real_A = data['A'].to(opt.device)
     real_B = data['B'].to(opt.device)
-    # split all frames into source and query sets
-    source_real_A, source_real_B = real_A[0:opt.n_support, :, :, :], real_B[0:opt.n_support, :, :, :]
-    query_real_A , query_real_B  = real_A[opt.n_support:, :, :, :], real_B[opt.n_support:, :, :, :]
+    # split all frames into support and query sets
+    support_real_A, support_real_B = real_A[0:opt.n_support, :, :, :], real_B[0:opt.n_support, :, :, :]
+    query_real_A , query_real_B  = real_A[opt.n_support:opt.n_support+opt.n_query, :, :, :], real_B[opt.n_support:opt.n_support+opt.n_query, :, :, :]
     for i in range(opt.inner_steps):
-        # compute fake_B's for source split
-        source_fake_B = G_learner(source_real_A)  # G(A)
-        # ------------------------------------------------ adapt discriminator D_learner using source split ------------------------------------------------
-        resized_source_real_A = nn.Upsample(scale_factor=2, mode='bilinear') (source_real_A)
-        fake_AB = torch.cat((resized_source_real_A, source_fake_B), 1)  # we use conditional GANs; we need to feed both input and output to the discriminator
+        # compute fake_B's for support split
+        support_fake_B = G_learner(support_real_A)  # G(A)
+        # ------------------------------------------------ adapt discriminator D_learner using support split ------------------------------------------------
+        resized_support_real_A = nn.Upsample(scale_factor=2, mode='bilinear') (support_real_A)
+        fake_AB = torch.cat((resized_support_real_A, support_fake_B), 1)  # we use conditional GANs; we need to feed both input and output to the discriminator
         pred_fake = D_learner(fake_AB.detach()) # stop backprop to the generator by detaching fake_B
         loss_D_fake = criterionGAN(pred_fake, False)
         # Real
-        real_AB = torch.cat((resized_source_real_A, source_real_B), 1)
+        real_AB = torch.cat((resized_support_real_A, support_real_B), 1)
         pred_real = D_learner(real_AB)
         loss_D_real = criterionGAN(pred_real, True)
         # combine loss
@@ -309,11 +309,11 @@ def adapt_adversarial(model, opt, data, test_time=False):
         compute_updates(D_learner, grads, opt)
         # update D_learner
         update_module(D_learner)
-        # ------------------------------------------------ adapt generator G_learner using source split ------------------------------------------------
+        # ------------------------------------------------ adapt generator G_learner using support split ------------------------------------------------
         # First, G(A) should fake the discriminator
         loss_G_GAN = criterionGAN(pred_fake, True)
         # Second, G(A) = B
-        loss_G_L1 = criterionL1(source_fake_B, source_real_B) * opt.lambda_L1
+        loss_G_L1 = criterionL1(support_fake_B, support_real_B) * opt.lambda_L1
         # combine loss
         loss_G = loss_G_GAN + loss_G_L1
         # compute gradients for all of G_learner's parameters
