@@ -5,6 +5,10 @@ Dataloaders and patch discriminator are borrowed from [here](https://github.com/
 
 ## TODO
 
+- [ ] test pretrained backbones from multiple epochs
+- [ ] test new pretraining
+- [ ] do not adapt discriminator
+- [ ] plot discriminator losses throughout training
 - [x] improve bookkeping: create results dir; use os.path.join()
 - [x] train joint reconstruction
 - [x] train MAML reconstruction
@@ -17,10 +21,8 @@ Dataloaders and patch discriminator are borrowed from [here](https://github.com/
 - [x] load pretrained encoder
 - [x] save opt to disk
 - [x] sweep number_inner_steps for sevir
-
-- [ ] test on MAML (e.g. implement inner loop in eval\_unet)
-- [ ] test contrastive pretrainig after limiting train set
-- [ ] test pretrained backbones from multiple epochs (?)
+- [x] test on MAML (e.g. implement inner loop in eval\_unet)
+- [x] test contrastive pretraining after limiting train set
 
 ## Lower priority
 - [ ] add miniimagenet dataloader
