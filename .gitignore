@@ -1,3 +1,4 @@
+checkpoint-low-data/
 *.out
 *.npy
 draft.ipynb
