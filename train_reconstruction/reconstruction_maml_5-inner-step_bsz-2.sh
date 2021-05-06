@@ -14,6 +14,6 @@ python -u train_unet.py \
         --resize_target \
         --target_size=384 \
 	--device=cuda \
-	--eval_freq=250 \
+	--eval_freq=500 \
 	--fraction_dataset=1 \
 	--checkpoint=checkpoints/reconstruction_maml_5-inner-step_2-bsz_train/
