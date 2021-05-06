@@ -51,9 +51,6 @@ if __name__ == "__main__":
     eval_dataloader = DataLoader(eval_dataset, batch_size=1) # help with oom
     opt.phase = "train"
 
-    print ("{} train tasks".format(len(train_dataloader)))
-    print ("{} eval tasks".format(len(eval_dataloader)))
-
     # train
     train_fn = eval("train_{}_{}".format(opt.optimization, opt.loss_function))
     for epoch in range(opt.n_epochs):

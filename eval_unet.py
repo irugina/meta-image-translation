@@ -91,9 +91,7 @@ if __name__ == "__main__":
     # data
     opt.phase = "test"
     test_dataset = SevirDataset(opt)
-    test_dataloader = DataLoader(test_dataset, batch_size=opt.batch_size)
-
-    print ("using {} test tasks".format(len(test_dataset)))
+    test_dataloader = DataLoader(test_dataset, batch_size=1)
 
     # get metric functions and names
     metric_functions = get_metric_functions()
@@ -122,6 +120,7 @@ if __name__ == "__main__":
             src_img, tgt_img = src_img.to(opt.device), tgt_img.to(opt.device)
             prediction = model(src_img)
 
+        # NOTE code below makes sense iff test dataloader has batch_size == 1
         if opt.optimization == "maml" and opt.loss_function == "adversarial":
             generator, discriminator = generator.to(opt.device), discriminator.to(opt.device)
             model = (generator, discriminator)
