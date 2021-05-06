@@ -13,6 +13,6 @@ python -u train_unet.py \
         --resize_target \
         --target_size=384 \
 	--device=cuda \
-	--eval_freq=250 \
+	--eval_freq=25 \
 	--fraction_dataset=10 \
 	--checkpoint=checkpoint-low-data/reconstruction_joint_10/

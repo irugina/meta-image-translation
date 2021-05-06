@@ -13,7 +13,7 @@ python -u train_unet.py \
         --resize_target \
         --target_size=384 \
 	--device=cuda \
-	--eval_freq=250 \
+	--eval_freq=25 \
 	--fraction_dataset=10 \
 	--checkpoint=checkpoint-low-data/pretained_reconstruction_joint_simclr_0323190646_0.0_0.03_10/ \
 	--pretrained_encoder \
