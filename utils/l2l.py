@@ -276,7 +276,64 @@ def adapt_reconstruction(model, data, opt, test_time=False):
         return query_real_A, query_fake_B, query_real_B
     return loss
 
-def adapt_adversarial(model, opt, data, test_time=False):
+def adapt_adversarial_v2(model, opt, data, test_time=False):
+    criterionGAN = GANLoss('vanilla').to(opt.device)
+    criterionL1 = torch.nn.L1Loss()
+    # unpack and clone G
+    generator, discriminator = model
+    G_learner = clone_module(generator)
+    # get A and B
+    real_A = data['A'].to(opt.device)
+    real_B = data['B'].to(opt.device)
+    # split all frames into support and query sets
+    support_real_A, support_real_B = real_A[0:opt.n_support, :, :, :], real_B[0:opt.n_support, :, :, :]
+    query_real_A , query_real_B  = real_A[opt.n_support:opt.n_support+opt.n_query, :, :, :], real_B[opt.n_support:opt.n_support+opt.n_query, :, :, :]
+    for i in range(opt.inner_steps):
+        # compute fake_B's for support split
+        support_fake_B = G_learner(support_real_A)  # G(A)
+        resized_support_real_A = nn.Upsample(scale_factor=2, mode='bilinear') (support_real_A)
+        fake_AB = torch.cat((resized_support_real_A, support_fake_B), 1)  # we use conditional GANs; we need to feed both input and output to the discriminator
+        pred_fake = discriminator(fake_AB.detach()) # stop backprop to the generator by detaching fake_B
+        # ------------------------------------------------ adapt generator G_learner using support split ------------------------------------------------
+        # First, G(A) should fake the discriminator
+        loss_G_GAN = criterionGAN(pred_fake, True)
+        # Second, G(A) = B
+        loss_G_L1 = criterionL1(support_fake_B, support_real_B) * opt.lambda_L1
+        # combine loss
+        loss_G = loss_G_GAN + loss_G_L1
+        # compute gradients for all of G_learner's parameters
+        grads = compute_gradients(G_learner, loss_G, opt)
+        # populate .update attributes for all of G_learner's parameters
+        compute_updates(G_learner, grads, opt)
+        # update G_learner
+        update_module(G_learner)
+    # compute fake_B's for query split
+    resized_query_real_A = nn.Upsample(scale_factor=2, mode='bilinear') (query_real_A)
+    query_fake_B = G_learner(query_real_A)  # G(A)
+    # ------------------------------------------------ compute loss on query split for discriminator ------------------------------------------------
+    fake_AB = torch.cat((resized_query_real_A, query_fake_B), 1)  # we use conditional GANs; we need to feed both input and output to the discriminator
+    pred_fake = discriminator(fake_AB.detach())
+    loss_D_fake = criterionGAN(pred_fake, False)
+    # Real
+    real_AB = torch.cat((resized_query_real_A, query_real_B), 1)
+    pred_real = discriminator(real_AB)
+    loss_D_real = criterionGAN(pred_real, True)
+    # combine loss
+    loss_D = (loss_D_fake + loss_D_real) * 0.5
+    # ------------------------------------------------ compute loss on query split for generator ------------------------------------------------
+    # First, G(A) should fake the discriminator
+    loss_G_GAN = criterionGAN(pred_fake, True)
+    # Second, G(A) = B
+    loss_G_L1 = criterionL1(query_fake_B, query_real_B) * opt.lambda_L1
+    # combine loss
+    loss_G = loss_G_GAN + loss_G_L1
+
+    if test_time:
+        return query_real_A, query_fake_B, query_real_B
+    return loss_D, loss_G, loss_G_L1, discriminator, G_learner
+
+
+def adapt_adversarial_v1(model, opt, data, test_time=False):
     criterionGAN = GANLoss('vanilla').to(opt.device)
     criterionL1 = torch.nn.L1Loss()
     # clone G and D
@@ -347,3 +404,8 @@ def adapt_adversarial(model, opt, data, test_time=False):
         return query_real_A, query_fake_B, query_real_B
     return loss_D, loss_G, loss_G_L1, D_learner, G_learner
 
+def adapt_adversarial(maml, opt, data, test_time=False):
+    if opt.fix_inner_loop_discriminator:
+        return adapt_adversarial_v2(maml, opt, data, test_time)
+    else:
+        return adapt_adversarial_v1(maml, otp, data, test_time)

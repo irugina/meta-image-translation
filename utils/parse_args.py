@@ -26,6 +26,8 @@ def parse_train_args():
     # load pretrained encoder
     parser.add_argument('--pretrained_encoder', action='store_true')
     parser.add_argument('--encoder_checkpoint', type=str, default='')
+    # freeze discriminator during MAML inner loop?
+    parser.add_argument('--fix_inner_loop_discriminator', action='store_true')
     # ------------------------------------------------------------------------------------------------data
     # filepaths
     parser.add_argument('--dataroot', type=str,
