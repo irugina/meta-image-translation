@@ -1,7 +1,7 @@
 checkpoint-low-data/
 *.out
 *.npy
-draft.ipynb
+*.ipynb
 checkpoints/
 *.png
 logs/
