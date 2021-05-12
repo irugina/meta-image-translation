@@ -5,7 +5,7 @@
 #SBATCH --job-name=reconstruction_maml_train_inner-lr-10xSmaller
 
 python -u train_unet.py \
-	--batch_size=2 \
+	--batch_size=4 \
 	--n_support=10 \
 	--n_query=10 \
 	--loss_function=reconstruction \
@@ -14,7 +14,7 @@ python -u train_unet.py \
 	--resize_target \
 	--target_size=384 \
 	--device=cuda \
-	--eval_freq=500 \
+	--eval_freq=250 \
 	--fraction_dataset=1 \
 	--checkpoint=checkpoints/reconstruction_maml_train_inner-lr-10xSmaller/ \
 	--inner_lr=0.00001

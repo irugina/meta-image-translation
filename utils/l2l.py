@@ -408,4 +408,4 @@ def adapt_adversarial(maml, opt, data, test_time=False):
     if opt.fix_inner_loop_discriminator:
         return adapt_adversarial_v2(maml, opt, data, test_time)
     else:
-        return adapt_adversarial_v1(maml, otp, data, test_time)
+        return adapt_adversarial_v1(maml, opt, data, test_time)
