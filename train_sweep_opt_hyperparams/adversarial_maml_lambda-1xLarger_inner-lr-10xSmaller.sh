@@ -10,8 +10,8 @@ python -u train_unet.py \
 	--n_query=10 \
 	--loss_function=adversarial \
 	--optimization=maml \
-        --resize_target \
-        --target_size=384 \
+	--resize_target \
+	--target_size=384 \
 	--device=cuda \
 	--eval_freq=250 \
 	--fraction_dataset=1 \
