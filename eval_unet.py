@@ -72,9 +72,11 @@ if __name__ == "__main__":
     parser.add_argument('--log', type=str, required=True)
     opt = parser.parse_args()
     log_path = opt.log
+    checkpoint = opt.checkpoint
 
     with open(os.path.join(opt.checkpoint, "opt.txt"), 'r') as f:
         opt.__dict__ = json.load(f)
+    opt.checkpoint = checkpoint
 
     # find checkpoint to load
     epoch, step = find_best_checkpoint(log_path)
