@@ -1,8 +1,8 @@
+import numpy as np
 import torch
 from torch.optim import Adam
 
 # local
-from utils.eval import *
 from utils.l2l import *
 from utils.gan_loss import *
 
@@ -34,6 +34,7 @@ def train_joint_adversarial(model, train_dataloader,  opt, epoch):
     # optimizers for generator and discriminator, respectively
     optimizer_G = Adam(generator.parameters(), lr=opt.lr, betas=(opt.beta1, 0.999))
     optimizer_D = Adam(discriminator.parameters(), lr=opt.lr, betas=(opt.beta1, 0.999))
+    ckpts = np.linspace(0, len(train_dataloader) , num=10, endpoint=False, dtype=int)
     for count, train_batch in enumerate(train_dataloader):
         # flatten first two axis - don't care about per event classification of different frames
         src_img = train_batch['A'].view(-1, *(train_batch['A'].size()[2:])).float()
@@ -66,17 +67,17 @@ def train_joint_adversarial(model, train_dataloader,  opt, epoch):
         loss_G.backward()
         optimizer_D.step()
         optimizer_G.step()
-        # eval
-        if count % opt.eval_freq == 0:
+        # ckpt
+        if count in ckpts:
+            print ('ckpt at step {} out of {} in epoch {}'.format(count, len(train_dataloader), epoch))
             make_checkpoint_adversarial(model, opt, count, epoch)
-    # also save end of epoch checkpoint
-    make_checkpoint_adversarial(model, opt, -1, epoch)
 
 def train_maml_adversarial(model, train_dataloader, opt, epoch):
     generator, discriminator = model
     # optimizers for generator and discriminator, respectively
     optimizer_G = Adam(generator.parameters(), lr=opt.lr, betas=(opt.beta1, 0.999))
     optimizer_D = Adam(discriminator.parameters(), lr=opt.lr, betas=(opt.beta1, 0.999))
+    ckpts = np.linspace(0, len(train_dataloader) , num=10, endpoint=False, dtype=int)
     for count, train_batch in enumerate(train_dataloader):
         loss_D, loss_G = 0,0
         for task_idx in range(train_batch['A'].size()[0]): #for each train task
@@ -95,15 +96,15 @@ def train_maml_adversarial(model, train_dataloader, opt, epoch):
         loss_G.backward()
         optimizer_D.step()
         optimizer_G.step()
-        # eval
-        if count % opt.eval_freq == 0:
+        # ckpt
+        if count in ckpts:
+            print ('ckpt at step {} out of {} in epoch {}'.format(count, len(train_dataloader), epoch))
             make_checkpoint_adversarial(model, opt,  count, epoch)
-    # also save end of epoch checkpoint
-    make_checkpoint_adversarial(model, opt, -1, epoch)
 
 def train_joint_reconstruction(model, train_dataloader,  opt, epoch):
     loss_fn = torch.nn.L1Loss()
     optimizer = Adam(model.parameters(), lr=opt.lr, betas=(opt.beta1, 0.999))
+    ckpts = np.linspace(0, len(train_dataloader) , num=10, endpoint=False, dtype=int)
     for count, train_batch in enumerate(train_dataloader):
         # flatten first two axis - don't care about per event classification of different frames
         src_img = train_batch['A'].view(-1, *(train_batch['A'].size()[2:])).float()
@@ -115,32 +116,32 @@ def train_joint_reconstruction(model, train_dataloader,  opt, epoch):
         loss = loss_fn(tgt_img, prediction)
         loss.backward()
         optimizer.step()
-        # eval
-        if count % opt.eval_freq == 0:
+        # ckpt
+        if count in ckpts:
+            print ('ckpt at step {} out of {} in epoch {}'.format(count, len(train_dataloader), epoch))
             make_checkpoint_reconstruction(model, opt, count, epoch)
-    # also save end of epoch checkpoint
-    make_checkpoint_reconstruction(model, opt, -1, epoch)
 
 def train_maml_reconstruction(model, train_dataloader, opt, epoch):
     loss_fn = torch.nn.L1Loss()
     optimizer = Adam(model.parameters(), lr=opt.lr, betas=(opt.beta1, 0.999))
+    ckpts = np.linspace(0, len(train_dataloader) , num=10, endpoint=False, dtype=int)
+    print (ckpts)
     for count, train_batch in enumerate(train_dataloader):
-       # data is meta-batch of train tasks - adapt and track loss on each
-       loss = 0
-       for task_idx in range(train_batch['A'].size()[0]): #for each train task
+        # data is meta-batch of train tasks - adapt and track loss on each
+        loss = 0
+        for task_idx in range(train_batch['A'].size()[0]): #for each train task
            task_data = {
                    'A': train_batch['A'][task_idx, :, :, :, :],
                    'B': train_batch['B'][task_idx, :, :, :, :],
                    }
            task_loss = adapt_reconstruction(model, task_data, opt)
            loss += task_loss
-       # perform outer loop optimization
-       loss /= opt.batch_size
-       optimizer.zero_grad()
-       loss.backward()
-       optimizer.step()
-       # eval
-       if count % opt.eval_freq == 0:
+        # perform outer loop optimization
+        loss /= opt.batch_size
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+        # ckpt
+        if count in ckpts:
+            print ('ckpt at step {} out of {} in epoch {}'.format(count, len(train_dataloader), epoch))
             make_checkpoint_reconstruction(model, opt, count, epoch)
-    # also save end of epoch checkpoint
-    make_checkpoint_reconstruction(model, opt, -1, epoch)
