@@ -6,6 +6,7 @@ def parse_train_args():
     parser = argparse.ArgumentParser(description='Process Train Arguments')
 
     parser.add_argument('--device', type=str, required=True)
+    parser.add_argument('--multi_gpu', action='store_true')
     # ------------------------------------------------------------------------------------------------training
     parser.add_argument('--batch_size', type=int, required=True)
     parser.add_argument('--optimization', type=str, required=True)

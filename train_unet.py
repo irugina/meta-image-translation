@@ -5,6 +5,7 @@ import numpy as np
 from torch.utils.data import DataLoader
 import torch
 from torch.optim import Adam
+import torch.nn as nn
 
 # local imports
 from data.sevir_dataset import SevirDataset
@@ -31,31 +32,29 @@ if __name__ == "__main__":
         generator_state.update(saved_dict)
         generator.load_state_dict(generator_state)
     generator = generator.to(opt.device)
+    if opt.multi_gpu: # on supercloud this will always be 2 gpus
+        generator = nn.DataParallel(generator, [0,1])
 
     # discriminator if training adversarially
     if opt.loss_function == 'adversarial':
         # conditional GAN - discriminator takes in both src and tgt views
         discriminator = NLayerDiscriminator(opt.input_nc + opt.output_nc)
         discriminator = discriminator.to(opt.device)
+        if opt.multi_gpu: # on supercloud this will always be 2 gpus
+            discriminator = nn.DataParallel(discriminator, [0,1])
         model = (generator, discriminator)
     else:
         model = generator
 
     # data
     train_dataset = SevirDataset(opt)
-    train_dataloader = DataLoader(train_dataset, batch_size=opt.batch_size)
-
-    # hack to create eval dataloader in this script
-    opt.phase = "valid"
-    eval_dataset = SevirDataset(opt)
-    eval_dataloader = DataLoader(eval_dataset, batch_size=1) # help with oom
-    opt.phase = "train"
+    train_dataloader = DataLoader(train_dataset, batch_size=opt.batch_size, num_workers=32)
 
     # train
     train_fn = eval("train_{}_{}".format(opt.optimization, opt.loss_function))
     for epoch in range(opt.n_epochs):
         t1 = time.time()
-        train_fn(model, train_dataloader, eval_dataloader, opt, epoch)
+        train_fn(model, train_dataloader, opt, epoch)
         t2 = time.time()
         print ("one epoch took {} seconds".format(t2-t1))
     torch.save(generator.state_dict(), os.path.join(opt.checkpoint, "generator_last.pt"))
