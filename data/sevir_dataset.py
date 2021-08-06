@@ -27,7 +27,6 @@ class SevirDataset(data.Dataset):
         self.root = opt.dataroot
         self.dir_AB = os.path.join(opt.dataroot, self.phase)  # get the image directory
         self.AB_paths = sorted(make_dataset(self.dir_AB))  # get image paths
-        assert(self.opt.load_size >= self.opt.crop_size)   # crop_size should be smaller than the size of loaded image
         self.input_nc = self.opt.input_nc
         self.output_nc = self.opt.output_nc
         # z-score normalization
@@ -38,6 +37,12 @@ class SevirDataset(data.Dataset):
         for key, value in ind_to_type.items():
             self.znorm[value] = (znorm_mu_sevir[key], znorm_sigma_sevir[key])
 
+    def resize_numpy(self, matrix, target_size):
+        number_frames, number_channels, w, h = matrix.shape
+        matrix = matrix.reshape((number_frames * number_channels, w, h))
+        matrix = [resize(x, (target_size, target_size), preserve_range=True) for x in matrix]
+        matrix = np.array(matrix).reshape(number_frames, number_channels, target_size, target_size)
+        return matrix
 
     def __getitem__(self, index):
         """Return a data point and its metadata information.
@@ -55,16 +60,6 @@ class SevirDataset(data.Dataset):
         AB_path = self.AB_paths[index]
         AB = np.load(AB_path).astype(np.float32)
         ind_to_type = {0: 'vis', 1: 'ir069', 2: 'ir107', 3: 'vil', 4: 'lght'}
-        # resize to opt.load_size
-        target_size = self.opt.load_size
-        number_frames, number_channels, w, h = AB.shape
-        AB = AB.reshape(number_frames * number_channels, w, h)
-        AB = [resize(x, (target_size, target_size), preserve_range=True) for x in AB]
-        AB = np.array(AB).reshape(number_frames, number_channels, target_size, target_size)
-        # crop
-        idx_min = int((target_size - self.opt.crop_size) / 2)
-        idx_max = idx_min + self.opt.crop_size
-        AB = AB[:, :, idx_min:idx_max, idx_min:idx_max]
         # choose number of frames
         n_samples_per_task = self.opt.n_support + self.opt.n_query
         AB = AB[:n_samples_per_task, :, :, :]
@@ -74,12 +69,13 @@ class SevirDataset(data.Dataset):
             AB[:, i] = (AB[:, i] - mu) / sigma
         # separate source and target
         A, B = AB[:, (1,2,4), :, :], AB[:, 3:4, :, :] # split AB image into A and B
-        # resize B if need be
+        # resize A to opt.load_size
+        A = self.resize_numpy(A, self.opt.load_size)
+        # resize B
         if self.opt.resize_target:
-            number_frames, _, w, h = B.shape
-            B = B.reshape(number_frames, w, h)
-            B = [resize(x, (self.opt.target_size, self.opt.target_size), preserve_range=True) for x in B]
-            B = np.array(B).reshape(number_frames, 1 , self.opt.target_size, self.opt.target_size)
+            B = self.resize_numpy(B, self.opt.target_size)
+        else:
+            B = self.resize_numpy(B, self.opt.load_size)
         # done
         return {'A': A, 'B': B, 'A_paths': AB_path, 'B_paths': AB_path}
 

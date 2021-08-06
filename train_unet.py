@@ -57,4 +57,7 @@ if __name__ == "__main__":
         train_fn(model, train_dataloader, opt, epoch)
         t2 = time.time()
         print ("one epoch took {} seconds".format(t2-t1))
+
     torch.save(generator.state_dict(), os.path.join(opt.checkpoint, "generator_last.pt"))
+    if opt.loss_function == 'adversarial':
+        torch.save(discriminator.state_dict(), os.path.join(opt.checkpoint, "discriminator_last.pt"))

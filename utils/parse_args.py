@@ -35,7 +35,6 @@ def parse_train_args():
     parser.add_argument('--phase', type=str, default='train')
     # use these for fast prototyping
     parser.add_argument('--load_size', type=int, default=192)
-    parser.add_argument('--crop_size', type=int, default=192)
     parser.add_argument('--fraction_dataset', type=int, default=1)
     # translation setup details
     parser.add_argument('--input_nc', type=int, default=3)
