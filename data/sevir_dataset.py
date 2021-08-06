@@ -5,6 +5,9 @@ from data.utils import get_params, get_transform, make_dataset
 from PIL import Image
 import numpy as np
 from skimage.transform import resize
+import torch
+import torch.nn.functional as F
+import torchvision.transforms as T
 
 class SevirDataset(data.Dataset):
     """A dataset class for paired image dataset.
@@ -62,7 +65,7 @@ class SevirDataset(data.Dataset):
         ind_to_type = {0: 'vis', 1: 'ir069', 2: 'ir107', 3: 'vil', 4: 'lght'}
         # choose number of frames
         n_samples_per_task = self.opt.n_support + self.opt.n_query
-        AB = AB[:n_samples_per_task, :, :, :]
+        AB = torch.from_numpy(AB[:n_samples_per_task, :, :, :])
         # normalize
         for i in [1,2,3,4]: #don't use vis at all
             mu, sigma  = self.znorm[ind_to_type[i]]
@@ -70,12 +73,10 @@ class SevirDataset(data.Dataset):
         # separate source and target
         A, B = AB[:, (1,2,4), :, :], AB[:, 3:4, :, :] # split AB image into A and B
         # resize A to opt.load_size
-        A = self.resize_numpy(A, self.opt.load_size)
+        A = F.interpolate(A, size=self.opt.load_size)
         # resize B
-        if self.opt.resize_target:
-            B = self.resize_numpy(B, self.opt.target_size)
-        else:
-            B = self.resize_numpy(B, self.opt.load_size)
+        target_size = self.opt.target_size if self.opt.resize_target else self.opt.load_size
+        B =  F.interpolate(B, size=target_size)
         # done
         return {'A': A, 'B': B, 'A_paths': AB_path, 'B_paths': AB_path}
 
