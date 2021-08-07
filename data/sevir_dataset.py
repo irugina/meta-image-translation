@@ -9,6 +9,51 @@ import torch
 import torch.nn.functional as F
 import torchvision.transforms as T
 
+def read_npy_chunk(filename, start_row, num_rows):
+    """
+    Reads a partial array (contiguous chunk along the first
+    axis) from an NPY file.
+    Parameters
+    ----------
+    filename : str
+        Name/path of the file from which to read.
+    start_row : int
+        The first row of the chunk you wish to read. Must be
+        less than the number of rows (elements along the first
+        axis) in the file.
+    num_rows : int
+        The number of rows you wish to read. The total of
+        `start_row + num_rows` must be less than the number of
+        rows (elements along the first axis) in the file.
+    Returns
+    -------
+    out : ndarray
+        Array with `out.shape[0] == num_rows`, equivalent to
+        `arr[start_row:start_row + num_rows]` if `arr` were
+        the entire array (note that the entire array is never
+        loaded into memory by this function).
+    """
+    assert start_row >= 0 and num_rows > 0
+    with open(filename, 'rb') as fhandle:
+        major, minor = np.lib.format.read_magic(fhandle)
+        shape, fortran, dtype = np.lib.format.read_array_header_1_0(fhandle)
+        assert not fortran, "Fortran order arrays not supported"
+        # Make sure the offsets aren't invalid.
+        assert start_row < shape[0], (
+            'start_row is beyond end of file'
+        )
+        assert start_row + num_rows <= shape[0], (
+            'start_row + num_rows > shape[0]'
+        )
+        # Get the number of elements in one 'row' by taking
+        # a product over all other dimensions.
+        row_size = np.prod(shape[1:])
+        start_byte = start_row * row_size * dtype.itemsize
+        fhandle.seek(start_byte, 1)
+        n_items = row_size * num_rows
+        flat = np.fromfile(fhandle, count=n_items, dtype=dtype)
+        return flat.reshape((-1,) + shape[1:])
+
 class SevirDataset(data.Dataset):
     """A dataset class for paired image dataset.
 
@@ -61,11 +106,12 @@ class SevirDataset(data.Dataset):
         """
         # read a image given a random integer index
         AB_path = self.AB_paths[index]
-        AB = np.load(AB_path).astype(np.float32)
         ind_to_type = {0: 'vis', 1: 'ir069', 2: 'ir107', 3: 'vil', 4: 'lght'}
-        # choose number of frames
+        # read partial .npy array
         n_samples_per_task = self.opt.n_support + self.opt.n_query
-        AB = torch.from_numpy(AB[:n_samples_per_task, :, :, :])
+        AB = read_npy_chunk(AB_path, 0, n_samples_per_task)
+        AB = np.float32(AB)
+        AB = torch.from_numpy(AB)
         # normalize
         for i in [1,2,3,4]: #don't use vis at all
             mu, sigma  = self.znorm[ind_to_type[i]]
