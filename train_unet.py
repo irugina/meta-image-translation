@@ -10,7 +10,7 @@ import torch.nn as nn
 # local imports
 from data.sevir_dataset import SevirDataset
 from models.sevir_generator import Unet
-from models.sevir_discriminator import NLayerDiscriminator
+from models.sevir_discriminator import NLayerDiscriminator, NLayerDiscriminatorSN
 from utils.train import *
 from utils.eval import *
 from utils.parse_args import *
@@ -38,7 +38,10 @@ if __name__ == "__main__":
     # discriminator if training adversarially
     if opt.loss_function == 'adversarial':
         # conditional GAN - discriminator takes in both src and tgt views
-        discriminator = NLayerDiscriminator(opt.input_nc + opt.output_nc)
+        if opt.spectral_norm_discriminator:
+            discriminator = NLayerDiscriminatorSN(opt.input_nc + opt.output_nc)
+        else:
+            discriminator = NLayerDiscriminator(opt.input_nc + opt.output_nc)
         discriminator = discriminator.to(opt.device)
         if opt.multi_gpu: # on supercloud this will always be 2 gpus
             discriminator = nn.DataParallel(discriminator, [0,1])

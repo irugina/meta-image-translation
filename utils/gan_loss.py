@@ -95,3 +95,7 @@ def cal_gradient_penalty(netD, real_data, fake_data, device, type='mixed', const
         return gradient_penalty, gradients
     else:
         return 0.0, None
+
+
+
+

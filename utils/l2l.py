@@ -5,6 +5,7 @@ import torch
 from torch.autograd import grad
 import traceback
 from utils.gan_loss import *
+from utils.common_helpers import *
 
 def clone_parameters(param_list):
     return [p.clone() for p in param_list]
@@ -250,162 +251,68 @@ def compute_gradients(module, loss, opt):
     return gradients
 
 
-def adapt_reconstruction(model, data, opt, test_time=False):
+
+def adapt_reconstruction(model, data, opt):
     loss_fn = torch.nn.L1Loss()
     # clone model
     learner = clone_module(model)
     # unpack task and put on cuda
-    real_A = data['A'].to(opt.device)
-    real_B = data['B'].to(opt.device)
-    support_real_A, support_real_B = real_A[0:opt.n_support, :, :, :], real_B[0:opt.n_support, :, :, :]
-    query_real_A , query_real_B  = real_A[opt.n_support:opt.n_support+opt.n_query, :, :, :], real_B[opt.n_support:opt.n_support+opt.n_query, :, :, :]
+    support_real_A, support_real_B, query_real_A , query_real_B = unpack_data(data, opt)
     # adapt learner on support frames
     for i in range(opt.inner_steps):
         # compute fake_B's for support split
         support_fake_B = learner(support_real_A)
         loss = loss_fn(support_real_B, support_fake_B)
-        # compute gradients for learner
+        # SGD update
         grads = compute_gradients(learner, loss, opt)
-        # populate .update attributes in learner
         compute_updates(learner, grads, opt)
-        # apply 1st order updates to learner
         update_module(learner)
     query_fake_B = learner(query_real_A)
     loss = loss_fn(query_real_B, query_fake_B)
-    if test_time:
-        return query_real_A, query_fake_B, query_real_B
-    return loss
+    return loss, learner
 
-def adapt_adversarial_v2(model, opt, data, test_time=False):
-    criterionGAN = GANLoss('vanilla').to(opt.device)
-    criterionL1 = torch.nn.L1Loss()
-    # unpack and clone G
-    generator, discriminator = model
-    G_learner = clone_module(generator)
-    # get A and B
-    real_A = data['A'].to(opt.device)
-    real_B = data['B'].to(opt.device)
-    # split all frames into support and query sets
-    support_real_A, support_real_B = real_A[0:opt.n_support, :, :, :], real_B[0:opt.n_support, :, :, :]
-    query_real_A , query_real_B  = real_A[opt.n_support:opt.n_support+opt.n_query, :, :, :], real_B[opt.n_support:opt.n_support+opt.n_query, :, :, :]
-    for i in range(opt.inner_steps):
-        # compute fake_B's for support split
-        support_fake_B = G_learner(support_real_A)  # G(A)
-        resized_support_real_A = nn.Upsample(scale_factor=2, mode='bilinear') (support_real_A)
-        fake_AB = torch.cat((resized_support_real_A, support_fake_B), 1)  # we use conditional GANs; we need to feed both input and output to the discriminator
-        pred_fake = discriminator(fake_AB.detach()) # stop backprop to the generator by detaching fake_B
-        # ------------------------------------------------ adapt generator G_learner using support split ------------------------------------------------
-        # First, G(A) should fake the discriminator
-        loss_G_GAN = criterionGAN(pred_fake, True)
-        # Second, G(A) = B
-        loss_G_L1 = criterionL1(support_fake_B, support_real_B) * opt.lambda_L1
-        # combine loss
-        loss_G = loss_G_GAN + loss_G_L1
-        # compute gradients for all of G_learner's parameters
-        grads = compute_gradients(G_learner, loss_G, opt)
-        # populate .update attributes for all of G_learner's parameters
-        compute_updates(G_learner, grads, opt)
-        # update G_learner
-        update_module(G_learner)
-    # compute fake_B's for query split
-    resized_query_real_A = nn.Upsample(scale_factor=2, mode='bilinear') (query_real_A)
-    query_fake_B = G_learner(query_real_A)  # G(A)
-    # ------------------------------------------------ compute loss on query split for discriminator ------------------------------------------------
-    fake_AB = torch.cat((resized_query_real_A, query_fake_B), 1)  # we use conditional GANs; we need to feed both input and output to the discriminator
-    pred_fake = discriminator(fake_AB.detach())
-    loss_D_fake = criterionGAN(pred_fake, False)
-    # Real
-    real_AB = torch.cat((resized_query_real_A, query_real_B), 1)
-    pred_real = discriminator(real_AB)
-    loss_D_real = criterionGAN(pred_real, True)
-    # combine loss
-    loss_D = (loss_D_fake + loss_D_real) * 0.5
-    # ------------------------------------------------ compute loss on query split for generator ------------------------------------------------
-    # First, G(A) should fake the discriminator
-    loss_G_GAN = criterionGAN(pred_fake, True)
-    # Second, G(A) = B
-    loss_G_L1 = criterionL1(query_fake_B, query_real_B) * opt.lambda_L1
-    # combine loss
-    loss_G = loss_G_GAN + loss_G_L1
-
-    if test_time:
-        return query_real_A, query_fake_B, query_real_B
-    return loss_D, loss_G, loss_G_L1, discriminator, G_learner
-
-
-def adapt_adversarial_v1(model, opt, data, test_time=False):
+def adapt_adversarial(model, opt, data):
     criterionGAN = GANLoss('vanilla').to(opt.device)
     criterionL1 = torch.nn.L1Loss()
     # clone G and D
     generator, discriminator = model
     G_learner = clone_module(generator)
     D_learner = clone_module(discriminator)
-    # get A and B
-    real_A = data['A'].to(opt.device)
-    real_B = data['B'].to(opt.device)
-    # split all frames into support and query sets
-    support_real_A, support_real_B = real_A[0:opt.n_support, :, :, :], real_B[0:opt.n_support, :, :, :]
-    query_real_A , query_real_B  = real_A[opt.n_support:opt.n_support+opt.n_query, :, :, :], real_B[opt.n_support:opt.n_support+opt.n_query, :, :, :]
+    # adaptation on support set
+    support_real_A, support_real_B, query_real_A , query_real_B = unpack_data(data, opt)
     for i in range(opt.inner_steps):
-        # compute fake_B's for support split
-        support_fake_B = G_learner(support_real_A)  # G(A)
-        # ------------------------------------------------ adapt discriminator D_learner using support split ------------------------------------------------
+        support_fake_B = G_learner(support_real_A)
         resized_support_real_A = nn.Upsample(scale_factor=2, mode='bilinear') (support_real_A)
-        fake_AB = torch.cat((resized_support_real_A, support_fake_B), 1)  # we use conditional GANs; we need to feed both input and output to the discriminator
-        pred_fake = D_learner(fake_AB.detach()) # stop backprop to the generator by detaching fake_B
-        loss_D_fake = criterionGAN(pred_fake, False)
-        # Real
-        real_AB = torch.cat((resized_support_real_A, support_real_B), 1)
-        pred_real = D_learner(real_AB)
-        loss_D_real = criterionGAN(pred_real, True)
-        # combine loss
-        loss_D = (loss_D_fake + loss_D_real) * 0.5
-        # compute gradients for all of D_learner's parameters
-        grads = compute_gradients(D_learner, loss_D, opt)
-        # populate .update attributes for all of D_learner's parameters
-        compute_updates(D_learner, grads, opt)
-        # update D_learner
-        update_module(D_learner)
-        # ------------------------------------------------ adapt generator G_learner using support split ------------------------------------------------
-        # First, G(A) should fake the discriminator
-        loss_G_GAN = criterionGAN(pred_fake, True)
-        # Second, G(A) = B
-        loss_G_L1 = criterionL1(support_fake_B, support_real_B) * opt.lambda_L1
-        # combine loss
+        loss_D_fake, loss_D_real, loss_G_GAN, loss_G_L1 = compute_GAN_loss(
+                resized_support_real_A, 
+                support_real_B, 
+                support_fake_B, 
+                D_learner, 
+                criterionGAN, 
+                criterionL1,
+                opt.lambda_L1)
+        # SGD inner loop for generator
         loss_G = loss_G_GAN + loss_G_L1
-        # compute gradients for all of G_learner's parameters
         grads = compute_gradients(G_learner, loss_G, opt)
-        # populate .update attributes for all of D_learner's parameters
         compute_updates(G_learner, grads, opt)
-        # update G_learner
         update_module(G_learner)
-    # compute fake_B's for query split
+        if not opt.fix_inner_loop_discriminator: # SGD inner loop for discriminator
+            loss_D = (loss_D_fake + loss_D_real) * 0.5
+            grads = compute_gradients(D_learner, loss_D, opt)
+            compute_updates(D_learner, grads, opt)
+            update_module(D_learner)
+    # compute loss on query set
     resized_query_real_A = nn.Upsample(scale_factor=2, mode='bilinear') (query_real_A)
     query_fake_B = G_learner(query_real_A)  # G(A)
-    # ------------------------------------------------ compute loss on query split for discriminator ------------------------------------------------
-    fake_AB = torch.cat((resized_query_real_A, query_fake_B), 1)  # we use conditional GANs; we need to feed both input and output to the discriminator
-    pred_fake = D_learner(fake_AB.detach())
-    loss_D_fake = criterionGAN(pred_fake, False)
-    # Real
-    real_AB = torch.cat((resized_query_real_A, query_real_B), 1)
-    pred_real = D_learner(real_AB)
-    loss_D_real = criterionGAN(pred_real, True)
-    # combine loss
+    loss_D_fake, loss_D_real, loss_G_GAN, loss_G_L1 = compute_GAN_loss(
+            resized_query_real_A, 
+            query_real_B, 
+            query_fake_B, 
+            D_learner, 
+            criterionGAN, 
+            criterionL1,
+            opt.lambda_L1)
     loss_D = (loss_D_fake + loss_D_real) * 0.5
-    # ------------------------------------------------ compute loss on query split for generator ------------------------------------------------
-    # First, G(A) should fake the discriminator
-    loss_G_GAN = criterionGAN(pred_fake, True)
-    # Second, G(A) = B
-    loss_G_L1 = criterionL1(query_fake_B, query_real_B) * opt.lambda_L1
-    # combine loss
     loss_G = loss_G_GAN + loss_G_L1
 
-    if test_time:
-        return query_real_A, query_fake_B, query_real_B
-    return loss_D, loss_G, loss_G_L1, D_learner, G_learner
-
-def adapt_adversarial(maml, opt, data, test_time=False):
-    if opt.fix_inner_loop_discriminator:
-        return adapt_adversarial_v2(maml, opt, data, test_time)
-    else:
-        return adapt_adversarial_v1(maml, opt, data, test_time)
+    return loss_D, loss_G, D_learner, G_learner
