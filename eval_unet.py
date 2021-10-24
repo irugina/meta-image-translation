@@ -62,7 +62,6 @@ def evaluate_prediction(vil_znorm, tgt_img, prediction, results):
     for key in results:
         results[key] += metrics[key]
 
-
 if __name__ == "__main__":
     # process cli arg
     parser = argparse.ArgumentParser()
@@ -114,4 +113,6 @@ if __name__ == "__main__":
             src_img, tgt_img = flatten_for_joint(batch, opt.device)
             prediction = model(src_img)
             evaluate_prediction(vil_znorm, tgt_img, prediction, results)
-    print (result)
+    for key, value in results.items():
+        results[key] = value / count
+    print (results)
