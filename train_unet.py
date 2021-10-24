@@ -19,6 +19,10 @@ if __name__ == "__main__":
     # parse cli args
     opt = parse_train_args()
 
+    # random seed
+    torch.manual_seed(opt.seed)
+    np.random.seed(opt.seed)
+
     # U-Net generator
     generator = Unet()
     if opt.pretrained_encoder:
@@ -27,7 +31,7 @@ if __name__ == "__main__":
         # filter for keys we have in generator
         saved_dict = {k[9:]: v for k, v in save_dict['state_dict'].items() if
                 (k.startswith('backbone.') and ('inc' in k or 'down' in k))}
-        # update state dixt
+        # update state dict
         generator_state = generator.state_dict()
         generator_state.update(saved_dict)
         generator.load_state_dict(generator_state)

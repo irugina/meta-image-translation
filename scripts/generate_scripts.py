@@ -5,15 +5,17 @@ if __name__ == "__main__":
     # get experiment spec from yaml file
     parser = argparse.ArgumentParser()
     parser.add_argument('--experiment', type=str, required=True)
-    with open('experiments/test.yaml') as f:
+    args = parser.parse_args()
+    with open(args.experiment) as f:
         data = yaml.load(f, Loader=yaml.FullLoader)
     # string snippets to create filenames
     loss_fn = data['loss_function']
     opt = data['optimization']
-    bsz = "bsz={}".format(data['batch_size'])
-    sn = "use-sn={}".format(data['spectral_norm_discriminator'])
-    pretrained = "ckpt=" + (data['encoder_checkpoint'].split("/")[-1].split(".")[0] if data['pretrained_encoder'] else "none")
-    fn_bookkeeping = "{}_{}_{}_{}_{}".format(loss_fn, opt, bsz, sn, pretrained)
+    bsz = "bsz-{}".format(data['batch_size'])
+    sn = "use-sn-{}".format(data['spectral_norm_discriminator'])
+    pretrained = "ckpt-" + (data['encoder_checkpoint'].split("/")[-1].split(".")[0] if data['pretrained_encoder'] else "none")
+    seed = "seed-{}".format(data['seed'])
+    fn_bookkeeping = "{}_{}_{}_{}_{}_{}".format(seed, loss_fn, opt, bsz, sn, pretrained)
 
     # ------------------------------------------------------------------------------------------------ train script
     # script preamble
@@ -27,6 +29,7 @@ if __name__ == "__main__":
     # train command
     command = "".join([
         "python -u train_unet.py \\\n",
+        "       --seed={} \\\n".format(data['seed']),
         "       --multi_gpu \\\n",
         "       --batch_size={} \\\n".format(data['batch_size']),
         "       --n_support=10 \\\n",
@@ -46,6 +49,7 @@ if __name__ == "__main__":
     # put them together
     script = "\n".join([preamble, command])
     # save train script to file
+    print ("train-scripts/" + fn_bookkeeping + ".sh")
     f = open("train-scripts/" + fn_bookkeeping + ".sh", "w")
     f.write(script)
     f.close()

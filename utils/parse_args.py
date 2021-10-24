@@ -46,6 +46,8 @@ def parse_train_args():
     # use these for fast prototyping and/or experiment with the k in 'k-shot'
     parser.add_argument('--n_support', type=int, default=24)
     parser.add_argument('--n_query', type=int, default=25)
+    #random seed
+    parser.add_argument('--seed', type=int, required=True)
 
     opt = parser.parse_args()
     print (opt)

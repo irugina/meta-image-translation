@@ -114,4 +114,4 @@ if __name__ == "__main__":
             src_img, tgt_img = flatten_for_joint(batch, opt.device)
             prediction = model(src_img)
             evaluate_prediction(vil_znorm, tgt_img, prediction, results)
-            print (result)
+    print (result)

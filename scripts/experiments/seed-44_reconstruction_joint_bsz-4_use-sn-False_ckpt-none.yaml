@@ -1,0 +1,8 @@
+loss_function: "reconstruction"
+optimization: "joint"
+spectral_norm_discriminator: false
+batch_size: 4
+pretrained_encoder: false
+encoder_checkpoint: none
+checkpoint_folder: "checkpoints"
+seed: 44
