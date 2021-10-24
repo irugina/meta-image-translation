@@ -49,7 +49,6 @@ if __name__ == "__main__":
     # put them together
     script = "\n".join([preamble, command])
     # save train script to file
-    print ("train-scripts/" + fn_bookkeeping + ".sh")
     f = open("train-scripts/" + fn_bookkeeping + ".sh", "w")
     f.write(script)
     f.close()

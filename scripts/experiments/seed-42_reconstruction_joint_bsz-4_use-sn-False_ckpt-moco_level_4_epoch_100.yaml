@@ -1,0 +1,8 @@
+loss_function: "reconstruction"
+optimization: "joint"
+spectral_norm_discriminator: false
+batch_size: 4
+pretrained_encoder: true
+encoder_checkpoint: ../MAML-Soljacic/sevir_iclr/moco_level_4_epoch_100.pth
+checkpoint_folder: "checkpoints"
+seed: 42
