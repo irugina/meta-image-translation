@@ -192,7 +192,7 @@ def ssl_loop(args):
     file_to_update = open(os.path.join(args.path_dir, 'training.log'), 'w')
 
     # dataset
-    dataloader_kwargs = dict(drop_last=True, pin_memory=True, num_workers=32)
+    dataloader_kwargs = dict(drop_last=True, pin_memory=True, num_workers=args.num_workers)
 
     train_loader = torch.utils.data.DataLoader(
         dataset=SevirDataset(
@@ -292,8 +292,8 @@ if __name__ == '__main__':
     parser.add_argument('--wd', default=0.0005, type=float)
     parser.add_argument('--save_every', default=5, type=int)
     parser.add_argument('--warmup_epochs', default=5, type=int)
-    parser.add_argument(
-        '--path_dir', default='../logs/ssl_framework/', type=str)
+    parser.add_argument('--num_workers', default=32, type=int)
+    parser.add_argument('--path_dir', default='../logs/ssl_framework/', type=str)
 
     parser.add_argument('--submit', action='store_true')
     parser.add_argument('--level', default=0, type=int)
@@ -301,30 +301,4 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    if args.submit:
-        if args.name:
-            name = args.name + '_'
-        else:
-            name = f'{args.level}'
-
-        print('Submitting the job.')
-        os.makedirs(
-            './scripts/ssl_framework/sevir/pretraining/augmentations', exist_ok=True)
-        os.makedirs(
-            './logs/ssl_framework/sevir/pretraining/augmentations', exist_ok=True)
-        preamble = (
-            f'#!/bin/sh\n#SBATCH --gres=gpu:volta:1\n#SBATCH --cpus-per-task=40\n#SBATCH'
-            f'-o ./logs/ssl_framework/sevir/pretraining/augmentations/{name}.out\n#SBATCH '
-            f'--job-name=scl_{name}_rumen --mail-user=rumenrd@mit.edu --mail-type=ALL\n\n'
-        )
-        with open(f'./scripts/ssl_framework/sevir/pretraining/augmentations/{name}.sh', 'w') as file:
-            file.write(preamble)
-            file.write(
-                f'python experiments/ssl_framework/sevir/pretraining/augmentations.py --level={args.level} '
-                f'--path_dir=../output/ssl_framework/sevir/pretraining/augmentations/{name}'
-            )
-            file.write('\n')
-        os.system(
-            f'sbatch ./scripts/ssl_framework/sevir/pretraining/augmentations/{name}.sh')
-    else:
-        main(args)
+    main(args)
