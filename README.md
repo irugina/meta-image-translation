@@ -27,4 +27,4 @@ Dataloaders and patch discriminator are borrowed from [here](https://github.com/
 ## Lower priority
 - [ ] add miniimagenet dataloader
 - [ ] MAML + pretraining
-- [ ] redo SEVIR dataset
+- [x] redo SEVIR dataset
